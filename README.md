@@ -210,7 +210,7 @@ We produce 8 flowcells of NA12878 Pore-C reads in house:
     /data1/chenying/dip3d/pore-c/NA12878_Rep9/pass.gt7.fastq.gz \
     /data1/chenying/dip3d/pore-c/NA12878_Rep10/pass \
 ```
-There are 123081636 􏰃Pore-C reads and 574 Gbp (191.3 X).
+There are 123081636 Pore-C reads and 574 Gbp (191.3 X).
 
 ## wallclock time
 `dip3d` took 40 hours to process the above Pore-C reads.
@@ -221,37 +221,37 @@ recall: 99.01%, precision: 99.25, F1-score: 99.13
 
 ## SNP phasing performance
 
-resolutions (the proportion of heterozygous SNPs contained in the largest phased block): 97.6-99.6%
-switch error: 0.05-1.18%
-hamming distance: 0.03-1.37%
+* resolutions (the proportion of heterozygous SNPs contained in the largest phased block): 97.6-99.6%
+* switch error: 0.05-1.18%
+* hamming distance: 0.03-1.37%
 
 ## fragment phasing performance
 
-Total fragments: 619.04m
-phased fragments by [`whatshap`](https://github.com/whatshap/whatshap): 156.55m (25.29%)
-filtered phased fragments: 144.25m (23.30%)
-phased fragments after imputation: 356.41m (57.57%)
+* Total fragments: 619.04m
+* phased fragments by [`whatshap`](https://github.com/whatshap/whatshap): 156.55m (25.29%)
+* filtered phased fragments: 144.25m (23.30%)
+* phased fragments after imputation: 356.41m (57.57%)
 
 ## contacts phasing performance
 
-Total contacts: 1399.71m
+* Total contacts: 1399.71m
 
 #### contacts phased by [`whatshap`](https://github.com/whatshap/whatshap)
-Total: 105.2m (7.52%)
-h-trans error (<5m): 3.31%
-h-trans error (<10m): 3.60%
-h-trans error (<20m): 4.01%
+* Total: 105.2m (7.52%)
+* h-trans error (<5m): 3.31%
+* h-trans error (<10m): 3.60%
+* h-trans error (<20m): 4.01%
 
 #### filtered phased contacts:
-Total: 144.25m (6.53%)
-h-trans error (<5m): 1.81%
-h-trans error (<10m): 2.01%
-h-trans error (<20m): 2.31%
+* Total: 144.25m (6.53%)
+* h-trans error (<5m): 1.81%
+* h-trans error (<10m): 2.01%
+* h-trans error (<20m): 2.31%
 
 #### phased contacts after imputation
-Total: 958.53m (68.48%)
-H1: 476.56m
-H2: 475.50m
+* Total: 958.53m (68.48%)
+* H1: 476.56m
+* H2: 475.50m
 
 
 
