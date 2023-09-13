@@ -15,7 +15,7 @@ The high data utilization and high-order chromosome fragment interactions captur
 * High speed. `dip3d` is capable of processing 574 Gbp Pore-C reads successfully in only two days.
 * High SNP calling accuracy. SNPS called with 90X Pore-C reads achieve over 99% of recall, precision and F1-score.
 * High SNP phasing accuracy. Using 90X Pore-C reads, the whole genome sequences are in phase. SNPS phased with Pore-C fragments achieve over 99% phasing resolutions. Switch errors are 0.05%~1.18%. Hamming distance are 0.03%~1.37%.
-* High data utilization. Using contact rescue, over 57% Pore-C fragments are successfully phased and over 68% pairwise contacts are successfully phased.
+* High data utilization. Using contact rescue, over 63.3% Pore-C fragments are successfully phased and over 78% pairwise contacts are successfully phased.
 
 # <a name="S-installation"></a> Installation
 
@@ -23,7 +23,7 @@ The high data utilization and high-order chromosome fragment interactions captur
 
 `dip3d` depends on the following tools (parentheses are the versions that we used):
 
-* [`falign`](https://github.com/xiaochuanle/Falign) (0.0.1)
+* [`falign`](https://github.com/xiaochuanle/Falign) (0.0.2)
 * [`bgzip`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
 * [`tabix`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
 * [`bcftools`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
@@ -62,27 +62,27 @@ $cp /home/zyserver/chenying/tools/dip3d/bin/dip3d.sh .
 We next edit `dip3d.sh` and fill in the following items:
 ```shell
 # 1) absolute path to dip3d
-I_dip3d=/home/zyserver/chenying/tools/dip3d
+I_dip3d=/data1/chenying/dip3d-1/dip3d
 
 # 2) output directory
 I_output=dip3d-output
 
 # 3) absolute path to reference genome
-I_reference=/home/zyserver/chenying/dip3d/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.major.fna
+I_reference=/data1/chenying/dip3d-1/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.major.fna
 
 # 4) number of cpu threads used
 I_threads=96
 
 # 5) restriction enzyme used for generating the Pore-C reads
-I_enzy=^GATC
+I_enzy=^GATC 
 
-# 6) extract this size of pore-c frags for SNP calling
+# 6) extract this coverage of pore-c frags for SNP calling
 I_snp_reads=270g
 
 # 7) minimum frag length for SNP calling
 I_snp_frag_size=100
 
-# 8) minimum alignment identity for frags
+# 8) minimum alignment identity for frags in SNP calling
 I_snp_frag_pi=85.0
 
 # 9) optional
@@ -91,7 +91,22 @@ I_snp_frag_pi=85.0
 # if not provided, dip3d will create a phased SNP set itself
 I_vcf=
 
-# 10) absolute path to a list of Pore-C reads
+# 10) maximum distance for haplotype imputation between adjacent fragment pairs
+I_FRAG_TAG_ADJ_DIST=29500000
+
+# 11) maximum distance for haplotype imputation between non-adjacent fragment pairs
+I_FRAG_TAG_DIST=16500000
+
+# 12) minimum mapping quality of fragment alignment for haplo-tagging
+I_FRAG_TAG_MAPQ=5
+
+# 13) minimum match bases surrounding overlapped SNVs for haplo-tagging
+I_FRAG_TAG_MATCH_BASE=3
+
+# 14) minimum percentage of alignment identity for haplo-tagging
+I_FRAG_TAG_IDENTITY=85.0
+
+# 15) absolute path to a list of Pore-C reads
 I_pore_c_reads=( \
     /data1/chenying/dip3d/pore-c/NA12878_Rep1/pass.gt7.fastq.gz \
     /data1/chenying/dip3d/pore-c/NA12878_Rep2/pass.gt7.fastq.gz \
@@ -162,34 +177,24 @@ is sorted and saved in
 ```shell
 /data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/sorted-frag-ref.bam
 ```
-This sorted `frag-bam` is then phased by [`whatshap`](https://github.com/whatshap/whatshap) with `phased_snp.vcf`. The phased results are saved in
+This sorted `frag-bam` is then phased by `Dip3d` with `phased_snp.vcf`. The phased results are saved in
 ```shell
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/chr1.whatshap.bam
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/frag-hap.list
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/chr2.whatshap.bam
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/frag-hap.list
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/snp-frag-hap.list
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/snp-frag-hap.list
 ...
 ```
-The unconfident tagged results of [`whatshap`](https://github.com/whatshap/whatshap) are filtered out and saved in
+The untaged fragments are then imputed and saved in
 ```shell
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/flt-frag-hap.list
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/flt-frag-hap.list
-...
-```
-The filtered phased results are the imputed and saved in
-```shell
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/imputed-flt-frag-hap.list
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/imputed-flt-frag-hap.list
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/imputed-frag-hap.list
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/imputed-frag-hap.list
 ...
 ```
 
-Finally, the imputed phased results are used for updating
+The BAM file of each chromosome is also tagged and stored in
 ```shell
-/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/sorted-frag-ref.bam
-```
-The tagged results are finally saved in
-```shell
-/data1/chenying/hg001-3d-genome/dip3d-output/4-tag-bam/tagged-sorted-frag-ref.bam
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr1/tagged-chr1.bam
+/data1/chenying/hg001-3d-genome/dip3d-output/3-frag-hap/chr2/tagged-chr2.bam
+...
 ```
 This is the final results output by `dip3d`. It is tagged in the same way as [`whatshap`](https://github.com/whatshap/whatshap). That is, `HP:i:1`, `HP:i:2` and untagged.
 
@@ -227,31 +232,21 @@ recall: 99.01%, precision: 99.25, F1-score: 99.13
 
 ## fragment phasing performance
 
-* Total fragments: 619.04m
-* phased fragments by [`whatshap`](https://github.com/whatshap/whatshap): 156.55m (25.29%)
-* filtered phased fragments: 144.25m (23.30%)
-* phased fragments after imputation: 356.41m (57.57%)
+* Total fragments: 564.8m
+* phased fragments by H-snp: 134.2m (23.76%)
+* phased fragments after imputation: 357.3m (63.3%)
 
 ## contacts phasing performance
 
-* Total contacts: 1399.71m
+* Total contacts: 1325m
 
-#### contacts phased by [`whatshap`](https://github.com/whatshap/whatshap)
-* Total: 105.2m (7.52%)
-* h-trans error (<5m): 3.31%
-* h-trans error (<10m): 3.60%
-* h-trans error (<20m): 4.01%
-
-#### filtered phased contacts:
-* Total: 144.25m (6.53%)
-* h-trans error (<5m): 1.81%
-* h-trans error (<10m): 2.01%
-* h-trans error (<20m): 2.31%
+#### contacts phased by H-snp
+* Total: 87.1m (6.6%)
 
 #### phased contacts after imputation
-* Total: 958.53m (68.48%)
-* H1: 476.56m
-* H2: 475.50m
+* Total: 1033.5m (78%)
+* H1: 513.2m
+* H2: 512.9m
 
 
 
