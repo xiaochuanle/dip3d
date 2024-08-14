@@ -8,11 +8,11 @@
 
 # <a name="S-introduction"></a> Introduction
 
-`dip3d` is a fast and effective high-order diploid human 3D genome construction method with Pore-C reads.
+`dip3d` is a fast and effective high-order diploid human 3D genome construction method for Pore-C reads.
 The high data utilization and high-order chromosome fragment interactions captured by Pore-C reads enable us to explore diploid second-order and high-order 3D constructs of human genomes systematically with high resolution.
 
 `dip3d` has many advantages:
-* High speed. `dip3d` is capable of processing 574 Gbp Pore-C reads successfully in only two days.
+* High speed. `dip3d` is capable of processing 574 Gbp Pore-C reads successfully in only one day.
 * High SNP calling accuracy. SNPS called with 90X Pore-C reads achieve over 99% of recall, precision and F1-score.
 * High SNP phasing accuracy. Using 90X Pore-C reads, the whole genome sequences are in phase. SNPS phased with Pore-C fragments achieve over 99% phasing resolutions. Switch errors are 0.05%~1.18%. Hamming distance are 0.03%~1.37%.
 * High data utilization. Using contact rescue, over 63.3% Pore-C fragments are successfully phased and over 78% pairwise contacts are successfully phased.
@@ -23,7 +23,7 @@ The high data utilization and high-order chromosome fragment interactions captur
 
 `dip3d` depends on the following tools (parentheses are the versions that we used):
 
-* [`falign`](https://github.com/xiaochuanle/Falign) (0.0.2)
+* [`falign`](https://github.com/xiaochuanle/Falign) (2.0.0)
 * [`bgzip`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
 * [`tabix`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
 * [`bcftools`](https://sourceforge.net/projects/samtools/files/samtools/1.15/) (1.15)
@@ -41,8 +41,9 @@ $ pwd
 ```shell
 $ git clone https://github.com/xiaochuanle/dip3d.git
 $ cd dip3d
-$ tar xzvf bin.tar.gz
-$ tar xzvf clair3_porec_model.tar.gz
+$ cd models
+$ tar xzvf clair3_v0.1-r10_guppy4_model.tar.gz 
+$ cd ..
 ```
 
 # <a name="S-usage"></a> Usage
@@ -57,65 +58,78 @@ $pwd
 ```
 First, we copy `dip3d.sh` in working directory:
 ```sell
-$cp /home/zyserver/chenying/tools/dip3d/bin/dip3d.sh .
+$cp /home/zyserver/chenying/tools/dip3d/dip3d.sh .
 ```
 We next edit `dip3d.sh` and fill in the following items:
 ```shell
-# 1) absolute path to dip3d
-I_dip3d=/data1/chenying/dip3d-1/dip3d
+### 1) Output directory of Dip3D
+I_output=hg001-dip3d-output
 
-# 2) output directory
-I_output=dip3d-output
-
-# 3) absolute path to reference genome
+### 2) Absolute path of reference genome
 I_reference=/data1/chenying/dip3d-1/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.major.fna
 
-# 4) number of cpu threads used
+### 3) Chromosome list
+I_CHR_LIST=(chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY)
+
+### 4) Number of CPU threads used by Dip3D
 I_threads=96
 
-# 5) restriction enzyme used for generating the Pore-C reads
-I_enzy=^GATC 
+### 5) Directory storing Clair Pore-C model
+I_clair3_model_directory=/data3/nbt-pore-c-data/dip3d/clair3_porec_model
 
-# 6) extract this coverage of pore-c frags for SNP calling
-I_snp_reads=270g
+### 6) Options for calling SNP by Clair3
+###   1. Coverage of Pore-C data
+I_snp_frag_coverage=90
+###   2. Minimum Pore-C fragment length
+I_snp_frag_length=100
+###   3. Minimum alignment identities
+I_snp_frag_identity=90.0
+###   4. Minimum mapping qualities
+I_snp_frag_mapQ=5
 
-# 7) minimum frag length for SNP calling
-I_snp_frag_size=100
+### 7) Options for select BAM for HapCUT2
+I_hapcut_frag_coverage=30
+I_hapcut_frag_length=100
+I_hapcut_frag_identity=90.0
+I_hapcut_frag_mapQ=5
 
-# 8) minimum alignment identity for frags in SNP calling
-I_snp_frag_pi=85.0
+### 7) Options for haplo-tagging Pore-C fragments with SNP
+###   1. Number of flanking match residues in overlapped SNP sites
+I_snp_tag_match_bases=3
+###   2. Only haplo-tagging Pore-C fragments with at least this mapping qualities
+I_snp_tag_mapQ=5
+###   3. Only haplo-tagging Pore-C fragments with at least this aligment identites
+I_snp_tag_identity=85.0
 
-# 9) optional
-# absolute path to a VCF file containing a phased SNP set
-# if provided, the SNP-calling step will be skipped
-# if not provided, dip3d will create a phased SNP set itself
-I_vcf=
+### 8) Options for haplotype imputation
+### 1. Maximum genomic distance between adjacent fragment pairs
+I_imputation_adj_dist=29500000
+### 2. Maximum genomic distacne between non-adjacent fragment pairs
+I_imputation_non_adj_dist=16500000
 
-# 10) maximum distance for haplotype imputation between adjacent fragment pairs
-I_FRAG_TAG_ADJ_DIST=29500000
+### 9) Options for running ASHIC algorithm
+###   1. Absolute path of ASHIC
+I_ASHIC_PATH=/data1/chenying/dip3d-1/dip3d/third-party/ASHIC
+###   2. Runing ASHIC algorithm (1) or not (0)
+I_RUN_ASHIC=0
+###   3. Resulotions of contact matrices
+I_ASHIC_RES=25000
+###   4. Minimum mapping qualities of Pore-C fragments
+I_ASHIC_mapQ=5
+###   5. Which algorithm to perform by ASHIC
+I_ASHIC_MODEL="ASHIC-ZIPM"
 
-# 11) maximum distance for haplotype imputation between non-adjacent fragment pairs
-I_FRAG_TAG_DIST=16500000
-
-# 12) minimum mapping quality of fragment alignment for haplo-tagging
-I_FRAG_TAG_MAPQ=5
-
-# 13) minimum match bases surrounding overlapped SNVs for haplo-tagging
-I_FRAG_TAG_MATCH_BASE=3
-
-# 14) minimum percentage of alignment identity for haplo-tagging
-I_FRAG_TAG_IDENTITY=85.0
-
-# 15) absolute path to a list of Pore-C reads
+### 10) Absolute path list of Pore-C list
+###     Please don't concat concat FASTQ files genergeted with different enzymes into one
 I_pore_c_reads=( \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep1/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep2/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep3/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep4/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep5/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep8/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep9/pass.gt7.fastq.gz \
-    /data1/chenying/dip3d/pore-c/NA12878_Rep10/pass \
+/data1/chenying/dip3d/pore-c/NA12878_Rep1/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep2/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep3/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep4/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep5/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep8/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep9/pass.gt7.fastq.gz
+/data1/chenying/dip3d/pore-c/NA12878_Rep10/pass.gt7.fastq.gz
 )
 ```
 Finally, we save and run `dip3d.sh`:
