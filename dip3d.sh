@@ -171,7 +171,7 @@ function prepare_reference()
 	fi
 
 	if [ ! -f ${reference}.wm.bed ]; then 
-		CMD="falign-wm ${reference} ${reference}.wm.bed"
+		CMD="falign build-repeat ${reference} ${reference}.wm.bed"
 		echo "[$(date)] Running command"
 		echo "  ${CMD}"
 		${CMD}
