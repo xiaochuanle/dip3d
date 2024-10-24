@@ -58,7 +58,7 @@ $pwd
 ```
 First, we copy `dip3d.sh` in working directory:
 ```sell
-$cp /home/zyserver/chenying/tools/dip3d/dip3d.sh .
+$cp /data3/HG001-pore-c/dip3d/dip3d.sh .
 ```
 We next edit `dip3d.sh` and fill in the following items:
 ```shell
@@ -75,7 +75,8 @@ I_CHR_LIST=(chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13
 I_threads=96
 
 ### 5) Directory storing Clair Pore-C model
-I_clair3_model_directory=/data3/nbt-pore-c-data/dip3d/clair3_porec_model
+###    The model is released together with Dip3D
+I_clair3_model_directory=/data3/HG001-pore-c/dip3d/models/clair3_v0.1-r10_guppy4_model
 
 ### 6) Options for calling SNP by Clair3
 ###   1. Coverage of Pore-C data
@@ -107,19 +108,7 @@ I_imputation_adj_dist=29500000
 ### 2. Maximum genomic distacne between non-adjacent fragment pairs
 I_imputation_non_adj_dist=16500000
 
-### 9) Options for running ASHIC algorithm
-###   1. Absolute path of ASHIC
-I_ASHIC_PATH=/data1/chenying/dip3d-1/dip3d/third-party/ASHIC
-###   2. Runing ASHIC algorithm (1) or not (0)
-I_RUN_ASHIC=0
-###   3. Resulotions of contact matrices
-I_ASHIC_RES=25000
-###   4. Minimum mapping qualities of Pore-C fragments
-I_ASHIC_mapQ=5
-###   5. Which algorithm to perform by ASHIC
-I_ASHIC_MODEL="ASHIC-ZIPM"
-
-### 10) Absolute path list of Pore-C list
+### 9) Absolute path list of Pore-C list
 ###     Please don't concat concat FASTQ files genergeted with different enzymes into one
 I_pore_c_reads=( \
 /data1/chenying/dip3d/pore-c/NA12878_Rep1/pass.gt7.fastq.gz
@@ -232,7 +221,7 @@ We produce 8 flowcells of NA12878 Pore-C reads in house:
 There are 123081636 Pore-C reads and 574 Gbp (191.3 X).
 
 ## wallclock time
-`dip3d` took 40 hours to process the above Pore-C reads.
+`dip3d` took 25 hours to process the above Pore-C reads.
 
 ## SNP calling performance
 

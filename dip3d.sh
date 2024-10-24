@@ -13,7 +13,8 @@ I_CHR_LIST=(chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13
 I_threads=96
 
 ### 5) Directory storing Clair Pore-C model
-I_clair3_model_directory=/data3/nbt-pore-c-data/dip3d/clair3_porec_model
+###    The model is released together with Dip3D
+I_clair3_model_directory=/data3/HG001-pore-c/dip3d/models/clair3_v0.1-r10_guppy4_model
 
 ### 6) Options for calling SNP by Clair3
 ###   1. Coverage of Pore-C data
@@ -45,19 +46,7 @@ I_imputation_adj_dist=29500000
 ### 2. Maximum genomic distacne between non-adjacent fragment pairs
 I_imputation_non_adj_dist=16500000
 
-### 9) Options for running ASHIC algorithm
-###   1. Absolute path of ASHIC
-I_ASHIC_PATH=/data1/chenying/dip3d-1/dip3d/third-party/ASHIC
-###   2. Runing ASHIC algorithm (1) or not (0)
-I_RUN_ASHIC=0
-###   3. Resulotions of contact matrices
-I_ASHIC_RES=25000
-###   4. Minimum mapping qualities of Pore-C fragments
-I_ASHIC_mapQ=5
-###   5. Which algorithm to perform by ASHIC
-I_ASHIC_MODEL="ASHIC-ZIPM"
-
-### 10) Absolute path list of Pore-C list
+### 9) Absolute path list of Pore-C list
 ###     Please don't concat concat FASTQ files genergeted with different enzymes into one
 I_pore_c_reads=( \
 /data1/chenying/dip3d/pore-c/NA12878_Rep1/pass.gt7.fastq.gz
@@ -83,6 +72,8 @@ G_CHR_BAM_DIR=${G_HOME}/2-chr-bams
 G_SNP_DIR=${G_HOME}/3-snp
 
 G_BAM_HAPLOTAG_DIR=${G_HOME}/4-bam-haplotag
+
+G_ASHIC_DIR=${G_HOME}/5-ashic-1
 
 ########################
 
@@ -160,18 +151,6 @@ function prepare_reference()
 	
 	if [ ! -f ${reference}.fai ]; then
 		CMD="dip3d index-fasta ${reference}"
-		echo "[$(date)] Running command"
-		echo "  ${CMD}"
-		${CMD}
-		if [ $? -ne 0 ]; then
-			echo "[$(date)] ERROR fail at running command"
-			echo "  ${CMD}"
-			exit 1
-		fi
-	fi
-
-	if [ ! -f ${reference}.wm.bed ]; then 
-		CMD="falign build-repeat ${reference} ${reference}.wm.bed"
 		echo "[$(date)] Running command"
 		echo "  ${CMD}"
 		${CMD}
@@ -623,6 +602,116 @@ function bam_haplotag_parallel()
 	if [ ${ERR} -ne 0 ]; then
 		exit 1
 	fi
+}
+
+function ashic_dip_mat_construction()
+{
+	mkdir -p ${G_ASHIC_DIR}
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi 
+
+	local j_all=${G_ASHIC_DIR}/all.done
+	if [ -f ${j_all} ]; then
+		return
+	fi
+
+	for chr in ${I_CHR_LIST[@]}
+	do
+		mkdir -p ${G_ASHIC_DIR}/${chr}
+		if [ $? -ne 0 ]; then
+			exit 1
+		fi
+	done
+
+	local j_extract_ashic_chr_size=${G_ASHIC_DIR}/extract-chr-size.done
+	if [ ! -f ${j_extract_ashic_chr_size} ]; then
+		CMD="dip3d extract-ashic-chr-size ${G_REFERENCE_DIR}/reference.fa ${G_ASHIC_DIR}/chrom.sizes"
+		echo "[$(date)] Running command"
+		echo "  ${CMD}"
+		${CMD}
+		if [ $? -ne 0 ]; then
+			exit 1
+		fi
+		touch ${j_extract_ashic_chr_size}
+	fi
+
+	local j_make_ashic_read_pair=${G_ASHIC_DIR}/make-ashic-read-pair.done
+	if [ ! -f ${j_make_ashic_read_pair} ]; then
+		for chr in ${I_CHR_LIST[@]}
+		do
+			CMD="dip3d frag-to-ashic-read-pair ${G_BAM_HAPLOTAG_DIR}/${chr}/imputed-frag-hap-list ${chr} ${I_ASHIC_mapQ} ${G_ASHIC_DIR}/${chr}/ashic-read-pair"
+			echo "[$(date)] Running command"
+			echo "  ${CMD}"
+			${CMD}
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+		done 
+		touch ${j_make_ashic_read_pair}
+	fi
+
+	local j_ashic_split2chrs=${G_ASHIC_DIR}/ashic-split2chr2.done
+	if [ ! -f ${j_ashic_split2chrs} ];
+	then
+		for chr in ${I_CHR_LIST[@]}
+		do
+			CMD="python ${I_dip_path}/third-party/ASHIC/ashic/cli/ashic_data.py split2chrs --chr1 1 --allele1 3 --chr2 4 --allele2 6 ${G_ASHIC_DIR}/${chr}/ashic-read-pair ${G_ASHIC_DIR}/${chr}"
+			echo "[$(date)] Running command"
+			echo "  ${CMD}"
+			${CMD}
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+		done 
+		touch ${j_ashic_split2chrs}
+	fi
+
+	local j_ashic_binning=${G_ASHIC_DIR}/ashic-binning.done
+	if [ ! -f ${j_ashic_binning} ]; then
+		for chr in ${I_CHR_LIST[@]}
+		do
+			CMD="python ${I_dip_path}/third-party/ASHIC/ashic/cli/ashic_data.py binning --c1=1 --p1=2 --a1=3 --c2=4 --p2=5 --a2=6 --res=${I_ASHIC_RES} --chrom=${chr} --genome ${G_ASHIC_DIR}/chrom.sizes ${G_ASHIC_DIR}/${chr}/ashic-read-pair ${G_ASHIC_DIR}/${chr}"
+			echo "[$(date)] Running command"
+			echo "  ${CMD}"
+			${CMD}
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+		done 
+		touch ${j_ashic_binning}
+	fi 
+
+	local j_ashic_pack=${G_ASHIC_DIR}/ashic-pack.done
+	if [ ! -f ${j_ashic_pack} ]; then
+		for chr in ${I_CHR_LIST[@]}
+		do
+			CMD="python ${I_dip_path}/third-party/ASHIC/ashic/cli/ashic_data.py pack ${G_ASHIC_DIR}/${chr} ${G_ASHIC_DIR}/${chr}"
+			echo "[$(date)] Running command"
+			echo "  ${CMD}"
+			${CMD}
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+		done
+		touch ${j_ashic_pack}
+	fi
+
+	local j_run_ashic=${G_ASHIC_DIR}/run-ashic.done
+	if [ ! -f ${j_run_ashic} ]; then
+		for chr in ${I_CHR_LIST[@]}
+		do
+			CMD="python ${I_dip_path}/third-party/ASHIC/ashic/__main__.py -i ${G_ASHIC_DIR}/${chr}/ashic-read-pair_${chr}_${I_ASHIC_RES}.pickle -o ${G_ASHIC_DIR}/${chr}-${I_ASHIC_RES}-${I_ASHIC_MODEL} --model ${I_ASHIC_MODEL}"
+			echo "[$(date)] Running command"
+			echo "  ${CMD}"
+			${CMD}
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi			
+		done 
+		touch ${j_run_ashic}
+	fi
+
 }
 
 validate_params
